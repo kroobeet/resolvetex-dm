@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отложенная отправка сообщений</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        #searchContainer {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        #searchInput {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex: 1;
+        }
+        #searchButton {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        #searchButton:hover {
+            background-color: #0056b3;
+        }
+        #userResults {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .user-info {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-info img {
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+        }
+        .user-info span {
+            display: block;
+            font-size: 14px;
+            color: #333;
+        }
+        .action-button {
+            display: flex;
+            gap: 10px;
+            margin-top: auto; /* Для того чтобы кнопки были внизу */
+        }
+        .action-button button {
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            padding: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .action-button button:hover {
+            background-color: #0056b3;
+        }
+        .action-button svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            overflow: auto; /* Добавлено для предотвращения переполнения */
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px; /* Устанавливаем максимальную ширину для модального окна */
+            position: relative;
+            box-sizing: border-box;
+            overflow: hidden; /* Добавлено для предотвращения переполнения содержимого */
+        }
+        .modal-content textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            resize: vertical; /* Позволяет изменять размер по вертикали */
+        }
+        .modal-content button {
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            padding: 10px;
+            cursor: pointer;
+            color: white;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .modal-content button:hover {
+            background-color: #0056b3;
+        }
+        .modal-content .close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        .info-button {
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            padding: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            margin-top: 20px;
+        }
+        .info-button svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+        .info-modal-content {
+            max-width: 400px; /* Устанавливаем максимальную ширину для информационного окна */
+        }
+    </style>
+</head>
+<body>
+    <div id="searchContainer">
+        <input type="text" id="searchInput" placeholder="Введите имя или фамилию для поиска">
+        <button id="searchButton" onclick="searchUser()">Найти пользователя</button>
+    </div>
+    <div id="userResults"></div>
+    
+    <!-- Информационная кнопка -->
+    <button class="info-button" onclick="openInfoModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+            <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
+        </svg>
+    </button>
+
+    <!-- Модальное окно для сообщения -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <textarea id="messageInput" rows="5" placeholder="Введите сообщение"></textarea>
+            <button onclick="sendMessage()">Отправить сообщение</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно для информации -->
+    <div id="infoModal" class="modal">
+        <div class="modal-content info-modal-content">
+            <span class="close" onclick="closeInfoModal()">&times;</span>
+            <h2>Информация</h2>
+            <p>Данное приложение ещё не работает в полной мере, но вы уже можете отправить из него обычное сообщение нужному пользователю.</p>
+        </div>
+    </div>
+
+    <script src="https://api.bitrix24.com/api/v1/"></script>
+    <script>
+        let currentUserId = null;
+
+        function searchUser() {
+            const findName = document.getElementById('searchInput').value.trim();
+
+            BX24.callMethod('im.search.user.list', {
+                'FIND': findName,
+                'LIMIT': 400
+            }, function(result) {
+                if (result.error()) {
+                    console.error('Ошибка при поиске пользователя:', result.error());
+                } else {
+                    console.log('Результат поиска:', result);
+
+                    const users = result.data();
+                    console.log('Данные пользователей:', users);
+
+                    const usersArray = Object.keys(users).map(key => users[key]);
+
+                    console.log('Количество найденных пользователей:', usersArray.length);
+                    console.log('Преобразованные данные пользователей:', usersArray);
+
+                    displayUsers(usersArray);
+                }
+            });
+        }
+
+        function displayUsers(users) {
+            const userResults = document.getElementById('userResults');
+            userResults.innerHTML = '';
+
+            users.forEach(user => {
+                const userInfo = document.createElement('div');
+                userInfo.className = 'user-info';
+
+                const userPhoto = user.avatar ? user.avatar : 'https://via.placeholder.com/60';
+                const userImage = document.createElement('img');
+                userImage.src = userPhoto;
+                userImage.alt = `${user.first_name} ${user.last_name}`;
+                userInfo.appendChild(userImage);
+
+                const userDetail = document.createElement('span');
+                userDetail.innerHTML = `<strong>${user.first_name} ${user.last_name}</strong><br>Должность: ${user.work_position || 'Не указана'}`;
+                userInfo.appendChild(userDetail);
+
+                const actionButton = document.createElement('div');
+                actionButton.className = 'action-button';
+                
+                const combinedButton = document.createElement('button');
+                combinedButton.innerHTML = ` 
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-envelope">
+                        <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1zm13 2.383-4.708 2.825L15 11.105zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741M1 11.105l4.708-2.897L1 5.383z"/>
+                    </svg>
+                `;
+                combinedButton.title = 'Отправить сообщение с отложенной доставкой';
+                combinedButton.setAttribute('data-user-id', user.id);
+                combinedButton.onclick = function() {
+                    currentUserId = user.id;
+                    console.log(currentUserId);
+                    openModal();
+                };
+                actionButton.appendChild(combinedButton);
+
+                userInfo.appendChild(actionButton);
+                userResults.appendChild(userInfo);
+            });
+        }
+
+        function openModal() {
+            document.getElementById('messageModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('messageModal').style.display = 'none';
+        }
+
+        function openInfoModal() {
+            document.getElementById('infoModal').style.display = 'flex';
+        }
+
+        function closeInfoModal() {
+            document.getElementById('infoModal').style.display = 'none';
+        }
+
+        function sendMessage() {
+            const message = document.getElementById('messageInput').value;
+            if (currentUserId && message) {
+                BX24.callMethod('im.message.add', {
+                    'DIALOG_ID': currentUserId,
+                    'MESSAGE': message
+                }, function(result) {
+                    if (result.error()) {
+                        console.error('Ошибка при отправке сообщения:', result.error());
+                    } else {
+                        console.log('Сообщение отправлено:', result);
+                        document.getElementById('messageInput').value = '';
+                        closeModal();
+                    }
+                });
+            } else {
+                alert('Пожалуйста, введите сообщение.');
+            }
+        }
+    </script>
+</body>
+</html>
